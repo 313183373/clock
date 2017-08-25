@@ -1,0 +1,305 @@
+C51 COMPILER V9.56.0.0   CLOCK                                                             08/25/2017 09:26:02 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE CLOCK
+OBJECT MODULE PLACED IN .\Objects\clock.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE clock.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\clo
+                    -ck.lst) TABS(2) OBJECT(.\Objects\clock.obj)
+
+line level    source
+
+   1          #include<reg52.h>
+   2          #include<string.h>
+   3          #include<stdio.h>
+   4          #include<stdlib.h>
+   5          
+   6          
+   7          sbit DU=P2^0;
+   8          sbit WE=P2^1;
+   9          sbit noisy=P2^3;
+  10          
+  11          uchar table[]={
+  12          0x3f,0x06,0x5b,0x4f,    //0~3
+  13          0x66,0x6d,0x7d,0x07,    //4~7
+  14          0x7f,0x6f,0x77,0x7c,    //8~b
+  15          0x39,0x5e,0x79,0x71    //c~f
+  16          };
+  17          
+  18          uchar LEDIndex[]={
+  19            0xff,0x7f,0xbf,0xdf,
+  20            0xef,0xf7,0xfb,0xfd,
+  21            0xfe
+  22          };
+  23          
+  24          uchar monthDay[]={
+  25            31,28,31,30,31,30,
+  26            31,31,30,31,30,31
+  27          };
+  28          
+  29          
+  30          uchar second0=0;
+  31          uchar second1=0;
+  32          uchar min0=0;
+  33          uchar min1=0;
+  34          uchar hour0=2;
+  35          uchar hour1=1;
+  36          uchar weekday=0;
+  37          uchar count=0;
+  38          
+  39          uchar *y;
+  40          uchar *m;
+  41          uchar *d;
+  42          uint year;
+  43          uchar month;
+  44          uchar day;
+  45          
+  46          
+  47          uchar temp[5];
+  48          
+  49          /* ???? */
+  50          //uchar alarmMin0=-1;
+  51          //uchar alarmMin1=-1;
+  52          //uchar alarmHour0=-1;
+  53          //uchar alarmHour1=-1;
+  54          
+C51 COMPILER V9.56.0.0   CLOCK                                                             08/25/2017 09:26:02 PAGE 2   
+
+  55          uchar TimeStr[]=__TIME__;
+  56          uchar DateStr[]=__DATE__;
+  57          
+  58          void knockTime(){
+  59   1        noisy=0;
+  60   1      }
+  61          
+  62          // checkAlarmTime(){
+  63          //  if(second0==0&&second1==0&&min0==alarmMin0&&min1==alarmMin1&&hour0==alarmHour0&&hour1==alarmHour1){
+  64          //    return 1;
+  65          //  }
+  66          //  return 0;
+  67          // }
+  68          
+  69          // alarm(){
+  70          //  return 0;
+  71          // }
+  72          
+  73          
+  74          // ????
+  75          updateTime(){
+  76   1        second0++;
+  77   1        if(!noisy){
+  78   2          noisy=1;
+  79   2        }
+  80   1        if(second0==10){
+  81   2          second0=0;
+  82   2          second1++;
+  83   2          if(second1==6){
+  84   3            second1=0;
+  85   3            min0++;
+  86   3            //if(checkAlarmTime()){
+  87   3            //  alarm();
+  88   3            //}
+  89   3            if(min0==10){
+  90   4              min0=0;
+  91   4              min1++;
+  92   4              if(min1==6){
+  93   5                min1=0;
+  94   5                hour0++;
+  95   5                knockTime();
+  96   5                if(hour1<2&&hour0==10){
+  97   6                  hour0=0;
+  98   6                  hour1++;
+  99   6                }else if(hour1==2&&hour0==4){
+ 100   6                  hour0=0;
+ 101   6                  hour1=0;
+ 102   6                  weekday++;
+ 103   6                  if(weekday==7){
+ 104   7                    weekday=0;
+ 105   7                  }
+ 106   6                }
+ 107   5              }
+ 108   4            }
+ 109   3          }
+ 110   2        }
+ 111   1        return 0;
+ 112   1      }
+ 113          
+ 114          void delay10ms()   //?? 0us
+ 115          {
+ 116   1          unsigned char a,b,c;
+C51 COMPILER V9.56.0.0   CLOCK                                                             08/25/2017 09:26:02 PAGE 3   
+
+ 117   1          for(c=1;c>0;c--)
+ 118   1              for(b=38;b>0;b--)
+ 119   1                  for(a=130;a>0;a--);
+ 120   1      }
+ 121          
+ 122          void delay1ms()   //?? 0us
+ 123          {
+ 124   1          unsigned char a,b,c;
+ 125   1          for(c=1;c>0;c--)
+ 126   1              for(b=142;b>0;b--)
+ 127   1                  for(a=2;a>0;a--);
+ 128   1      }
+ 129          
+ 130          uchar getMonthDay(uint year,uchar month){
+ 131   1        if(month==2){
+ 132   2          return (((year%4 == 0) && (year%100 != 0) || (year%400 == 0))?29:28);
+ 133   2        }
+ 134   1        return monthDay[month-1];
+ 135   1      }
+ 136          
+ 137          uchar calcWeekDay(uint year,uchar month,uchar day){
+ 138   1        uint nday=0;
+ 139   1        uint i;
+ 140   1        for(i=1900;i<year;i++){
+ 141   2          nday+=((i%4==0&&i%100!=0)||(i%400==0)?366:365);
+ 142   2        }
+ 143   1        for(i=1;i<month;i++){
+ 144   2          nday+=getMonthDay(year,i);
+ 145   2        }
+ 146   1        nday+=day;
+ 147   1        return nday%7;
+ 148   1      }
+ 149          
+ 150          uchar getWeekDay(){
+ 151   1        m=strtok(DateStr," ");
+ 152   1        d=strtok(NULL," ");
+ 153   1        day=atoi(d);
+ 154   1        y=strtok(NULL," ");
+ 155   1        year=atoi(y);
+ 156   1        if(!strcmp(m,"Jan")){
+ 157   2          month=1;
+ 158   2        }else if(!strcmp(m,"Feb")){
+ 159   2          month=2;
+ 160   2        }else if(!strcmp(m,"Mar")){
+ 161   2          month=3;
+ 162   2        }else if(!strcmp(m,"Apr")){
+ 163   2          month=4;
+ 164   2        }else if(!strcmp(m,"May")){
+ 165   2          month=5;
+ 166   2        }else if(!strcmp(m,"Jun")){
+ 167   2          month=6;
+ 168   2        }else if(!strcmp(m,"Jul")){
+ 169   2          month=7;
+ 170   2        }else if(!strcmp(m,"Aug")){
+ 171   2          month=8;
+ 172   2        }else if(!strcmp(m,"Sep")){
+ 173   2          month=9;
+ 174   2        }else if(!strcmp(m,"Oct")){
+ 175   2          month=10;
+ 176   2        }else if(!strcmp(m,"Dec")){
+ 177   2          month=11;
+ 178   2        }else if(!strcmp(m,"Nov")){
+C51 COMPILER V9.56.0.0   CLOCK                                                             08/25/2017 09:26:02 PAGE 4   
+
+ 179   2          month=12;
+ 180   2        }
+ 181   1        
+ 182   1        return calcWeekDay(year,month,day);
+ 183   1      }
+ 184          
+ 185          //?????,???????
+ 186          void initTime(){
+ 187   1        hour1=TimeStr[0]-'0';
+ 188   1        hour0=TimeStr[1]-'0';
+ 189   1        min1=TimeStr[3]-'0';
+ 190   1        min0=TimeStr[4]-'0';
+ 191   1        second1=TimeStr[6]-'0';
+ 192   1        second0=TimeStr[7]-'0';
+ 193   1        weekday=getWeekDay();
+ 194   1      }
+ 195          
+ 196          void lightLED(index,number){
+ 197   1        DU=1;
+ 198   1        P0=table[number];
+ 199   1        DU=0;
+ 200   1        P0=0xff;
+ 201   1        WE=1;
+ 202   1        P0=LEDIndex[index];
+ 203   1        WE=0;
+ 204   1      }
+ 205          
+ 206          // ????,?????
+ 207          void showTime(){
+ 208   1        lightLED(8,hour1);
+ 209   1        delay1ms();
+ 210   1        lightLED(7,hour0);
+ 211   1        delay1ms();
+ 212   1        lightLED(6,min1);
+ 213   1        delay1ms();
+ 214   1        lightLED(5,min0);
+ 215   1        delay1ms();
+ 216   1        lightLED(4,second1);
+ 217   1        delay1ms();
+ 218   1        lightLED(3,second0);
+ 219   1        delay1ms();
+ 220   1        lightLED(1,weekday);
+ 221   1        delay1ms();
+ 222   1      }
+ 223          
+ 224          
+ 225          
+ 226          void init(){
+ 227   1        //EX0=1;
+ 228   1        EX1=1;
+ 229   1        IT0=1;
+ 230   1        IT1=1;
+ 231   1        ET0=1;
+ 232   1        ET1=1;
+ 233   1        TMOD=0x61;
+ 234   1        TL0=0x00;
+ 235   1        TH0=0x4c;
+ 236   1        TH1=0xf7;
+ 237   1        TL1=0xf7;
+ 238   1        TR0=1;
+ 239   1        TR1=1;
+ 240   1        EA=1;
+C51 COMPILER V9.56.0.0   CLOCK                                                             08/25/2017 09:26:02 PAGE 5   
+
+ 241   1        T1=0;
+ 242   1      }
+ 243          
+ 244          // ???
+ 245          timer0() interrupt 1{
+ 246   1        //count++;
+ 247   1        //if(count==18){
+ 248   1          //updateTime();
+ 249   1          //count=0;
+ 250   1        //}
+ 251   1        T1=~T1;
+ 252   1        TH0=0x3c;
+ 253   1        TL0=0xb0;
+ 254   1      }
+ 255          
+ 256          //???
+ 257          timer1() interrupt 3{
+ 258   1        updateTime();
+ 259   1      }
+ 260          
+ 261          // ???? ????
+ 262          int0() interrupt 0{
+ 263   1        TR0=~TR0;
+ 264   1      }
+ 265          
+ 266          
+ 267          void main(){
+ 268   1        init();
+ 269   1        initTime();
+ 270   1        while(1){
+ 271   2          showTime();
+ 272   2        }
+ 273   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    939    ----
+   CONSTANT SIZE    =     50    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     84       9
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
